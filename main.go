@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -29,10 +30,26 @@ type CachedResponse struct {
 }
 
 var (
-	flagHost = flag.String("host", "localhost", "Host to listen on")
-	flagPort = flag.Int("port", 8080, "Port to listen on")
+	flagHost = flag.String("host", getEnv("API_HOST", "localhost"), "Host to listen on")
+	flagPort = flag.Int("port", getEnv("API_PORT", 8080), "Port to listen on")
 	cache    = expirable.NewLRU[string, CachedResponse](10, nil, time.Hour*1)
 )
+
+func getEnv[T string | int](key string, defaultValue T) T {
+	value := os.Getenv(key)
+	if len(value) == 0 {
+		return defaultValue
+	}
+
+	if _, ok := any(defaultValue).(int); ok {
+		i, err := strconv.Atoi(value)
+		if err != nil {
+			return defaultValue
+		}
+		return any(i).(T)
+	}
+	return any(value).(T)
+}
 
 func main() {
 	flag.Parse()
